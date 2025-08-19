@@ -11,8 +11,10 @@ export const register = async (req, res) => {
       return res.status(400).json({
         message: "Please mention the missing fields",
         success: false,
+        receivedData: { fullname, email, phoneNumber, password, role }
       });
     }
+
     const user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({
@@ -22,19 +24,24 @@ export const register = async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const newUser = await User.create({
       fullname,
       email,
-      phoneNumber,
+      phoneNumber: parseInt(phoneNumber),
       password: hashedPassword,
       role,
     });
     return res.status(200).json({
+      user: newUser,
       message: "Account created successfully",
       success: true,
     });
   } catch (error) {
     console.error(error);
+    return res.status(error.status).json({
+      message: error.message,
+      success: false,
+    });
   }
 };
 
@@ -50,21 +57,19 @@ export const login = async (req, res) => {
     }
 
     let user = await User.findOne({ email });
-    if (!user) {
+    if (!user || user === null) {
       return res.status(400).json({
-        message: "Incorrect Email or Password",
+        message: "User does not exist with this email",
         success: false,
       });
     }
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
-      if (!user) {
-        return res.status(400).json({
-          message: "Incorrect Email or Password",
-          success: false,
-        });
-      }
+      return res.status(400).json({
+        message: "Incorrect Email or Password",
+        success: false,
+      });
     }
     // check role is correct or not
     if (role !== user.role) {
@@ -121,16 +126,9 @@ export const updateProfile = async (req, res) => {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
     const file = req.file;
 
-    if (!fullname || !email || !phoneNumber || !password || !role) {
-      return res.status(400).json({
-        message: "Please mention the missing fields",
-        success: false,
-      });
-    }
-
     // cloudinary will come here (file yaha use hoga)
     let skillsArray;
-    if(skills) {
+    if (skills) {
       skillsArray = skills.split(",");
     }
     const UserId = req.id; // leave it will learn later with middleware authentication

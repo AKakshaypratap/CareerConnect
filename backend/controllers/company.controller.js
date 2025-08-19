@@ -88,8 +88,7 @@ export const udpateCompany = async(req, res) => {
             });
         };
         return res.status(200).json({
-            message: "company details updated successfully",
-            
+            message: "company details updated successfully",   
             success: true
         })
     } catch (error) {
